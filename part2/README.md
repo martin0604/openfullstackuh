@@ -1,1 +1,1 @@
-Excercises from Part 1 of the course FullStack Web development. 
+Excercises from Part 2 of the course FullStack Web development. 
