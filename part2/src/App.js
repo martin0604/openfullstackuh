@@ -154,6 +154,12 @@ const App = () => {
         setTimeout(() => {
             setMessage({message:'', type:''});
         }, 5000);
+      }).catch(error => {
+        setMessage({message:error.response.data.error, type:'error'});
+        setTimeout(() => {
+          setMessage({message:'', type:''});
+      }, 5000);
+        console.log("Error al intentar agregar:",error.response.data.error);
       });
     }
     
