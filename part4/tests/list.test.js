@@ -147,5 +147,3 @@ describe('Most likes', () => {
       });
     });
 });
-
-
