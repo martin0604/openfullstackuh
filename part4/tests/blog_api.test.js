@@ -6,15 +6,23 @@ const api = supertest(app);
 const helper = require('./test_helper');
 
 const Blog = require('../models/blog');
+const { AUTH_TOKEN } = require('../utils/config');
 
 beforeEach(async () => {
     await Blog.deleteMany({});
-    await Blog.insertMany(helper.initialBlogs);
+    //Get list of users from database
+    const users = await helper.usersInDb();
+    const blogsToBeinserted = helper.initialBlogs.map(blog => { //Set the user who created the blogs as the first one from the retrieved list
+        blog.user = users[0].id;
+        return blog;
+    })
+    await Blog.insertMany(blogsToBeinserted);
 });
 
 test('blogs are returned as json', async () => {
     await api
       .get('/api/blogs')
+      .set('authorization', `Bearer ${AUTH_TOKEN}`)
       .expect(200)
       .expect('Content-Type', /application\/json/);
 });
@@ -36,15 +44,19 @@ test('creation of a new blog post in database', async () => {
     let response = await api.get('/api/blogs'); //Obtener blogs
     let currentNumPosts = response.body.length; //get current number of blog posts
     
+    const users = await helper.usersInDb(); //Get list of all users from database
+
     const newPost = { //New post object to be created in database
         "title": "Translating from english to spanish",
         "author": "Ana Cecilia Perea",
         "url": "https://www.google.com.co",
-        "likes": 6
+        "likes": 6,
+        "userId": users[0].id
     }
 
     //Enviar peticion post con objeto newPost para crear nueva publicacion de blog en base de datos
     await api.post('/api/blogs')
+    .set('authorization', `Bearer ${AUTH_TOKEN}`)
     .send(newPost)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -59,11 +71,13 @@ test('creation of a new blog post in database', async () => {
 
 //Test for exercise 4.11
 test('if likes property is missing set it as zero', async () => {
-    
+    const users = await helper.usersInDb(); //Get list of all users from database
+
     const newPost = { //New post object to be created in database without 'likes' property
         "title": "The bourne legacy review",
         "author": "Peter Bradshaw",
         "url": "https://www.theguardian.com/film/2012/aug/09/the-bourne-legacy-review",
+        "userId": users[0].id
     }
     
     //Send post request with the newPost object
@@ -113,6 +127,25 @@ test('Update info for an individual blog post', async () =>{
     await api.put(`/api/blogs/${postToUpdate.id}`)
     .send(newPostInfo)
     .expect(204);
+
+});
+
+//Exercise 4.23, adding a blog post fails if no auth_token is provided
+test('blog post creation fails if no auth token is provided', async () => {
+    const users = await helper.usersInDb(); //Get list of all users from database
+
+    const newPost = { //New post object to be created in database
+        "title": "Translating from english to spanish",
+        "author": "Ana Cecilia Perea",
+        "url": "https://www.google.com.co",
+        "likes": 6,
+        "userId": users[0].id
+    }
+
+    //Send POST request to create a new blog post, since no auth_token is provided, a response with 401 status code is expected
+    await api.post('/api/blogs')
+    .send(newPost)
+    .expect(401);
 
 });
 
